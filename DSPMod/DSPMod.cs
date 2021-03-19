@@ -65,34 +65,46 @@ namespace DSPMod
         public static void UIPlanetDetail_Postfix(UIPlanetDetail __instance)
         {
             GameObject go = __instance.gameObject;
-            // .entries contains the values for the resources listed. todo: update comments
             Debug.Log("UIPlanetDetail opened.");
             /**
              * Structure of gameobjects is (from trial and error and a lot of Debug.Log):
              * planet-detail-ui:
              *  line
              *  res-entry [Contains the UIResAmountEntry component]:
-             *   icon
+             *   icon [Contains UIButton component, UI.Image]
              *   value-text
              *  res-entry(clone):
              *   icon
              *   value-text
              * 
              */
+            // UIRoot.instance.uiGame.planetDetail.entries
             Transform[] resGroup = go.transform.Find("res-group").GetComponentsInChildren<Transform>();
             foreach (Transform child in resGroup)
             {
                 Debug.Log(child.gameObject.ToString() + ", has parent: " + child.parent.ToString());
-                if (child.gameObject.name.Contains("res-entry"))
+                Debug.Log(child.gameObject.activeInHierarchy);
+                // Todo: make button actually appear, look into making a new sprite like the other guy rather than copying the entire gameobject.
+                if (child.gameObject.name.Contains("res-entry") && !child.Find("poopoo"))
                 {
-                    foreach (var component in child.gameObject.GetComponents(typeof(Component))) {
-                        // Debug.Log(component.name + " | " + component.ToString());
-                    }
-                    Debug.Log("");
+                    GameObject tempButton = GameObject.Instantiate<GameObject>(
+                        original: child.Find("icon").gameObject,
+                        position: new Vector3(child.position.x+0.2f, child.position.y+0.01F),
+                        rotation: Quaternion.identity,
+                        parent:   child);
+                    tempButton.SetActive(true);
+                    tempButton.name = "poopoo";
+                    Debug.Log("created poopoo at:" + tempButton.transform.position);
+                    Debug.Log("child position: " + child.position.ToString());
+                    Debug.Log(tempButton.transform.parent);
+
+                    /*foreach (var component in child.gameObject.GetComponents(typeof(Component))) {
+                        Debug.Log(component.name + " | " + component.ToString() + " || " + component.GetType() + " || " + component.GetType().ToString());
+                    } */
                 }
                 
             }
-                foreach (UIResAmountEntry res in __instance.entries)
+            foreach (UIResAmountEntry res in __instance.entries)
             {
                 /**
                  * res.refId contains the id of the resource counted. According to the enum EVeinType:
