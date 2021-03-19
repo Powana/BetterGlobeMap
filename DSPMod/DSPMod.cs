@@ -92,7 +92,6 @@ namespace DSPMod
                 }
                 
             }
-                // VeinData[] planetVeins = __instance.planet.data.veinPool;
                 foreach (UIResAmountEntry res in __instance.entries)
             {
                 /**
@@ -116,7 +115,6 @@ namespace DSPMod
                  * 
                  * Non-mineral resources (area, wind energy ratio, solar energy ratio etc.) do not have a stringbuilder attached.
                  */
-                // Debug.Log(planetVeins[res.refId])
                 Debug.Log((EVeinType) res.refId + ": " + res.valueString);
                 // if (res.sb != null) Debug.Log(res.sb.ToString());
             }
