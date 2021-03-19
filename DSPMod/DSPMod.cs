@@ -78,12 +78,10 @@ namespace DSPMod
              *   value-text
              * 
              */
-            // UIRoot.instance.uiGame.planetDetail.entries
             Transform[] resGroup = go.transform.Find("res-group").GetComponentsInChildren<Transform>();
             foreach (Transform child in resGroup)
             {
                 Debug.Log(child.gameObject.ToString() + ", has parent: " + child.parent.ToString());
-                Debug.Log(child.gameObject.activeInHierarchy);
                 // Todo: make button actually appear, look into making a new sprite like the other guy rather than copying the entire gameobject.
                 if (child.gameObject.name.Contains("res-entry") && !child.Find("poopoo"))
                 {
@@ -104,6 +102,7 @@ namespace DSPMod
                 }
                 
             }
+           
             foreach (UIResAmountEntry res in __instance.entries)
             {
                 /**
