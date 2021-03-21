@@ -21,25 +21,9 @@ namespace DSPMod
         public const string pluginName = "Test plugin for DSP";
         public const string pluginVersion = "0.0.0.1";
 
-        Dictionary<int, string> resNames = new Dictionary<int, string> {
-            {0, "None"},
-            {1, "Iron Ore"},
-            {2, "Copper Ore"},
-            {3, "Silicium Ore"},
-            {4, "Titanium Ore"},
-            {5, "Stone"},
-            {6, "Coal"},
-            {7, "Oil"},
-            {8, "Fireice"},
-            {9, "Diamond"},
-            {10, "Fractal"},
-            {11, "Crysrub"},
-            {12, "Grat"},
-            {13, "Bamboo"},
-            {14, "Mag"},
-            {15, "Max"},
-
-        };
+        static Dictionary<int, bool> highlightEnabled;
+        static Sprite spriteEnabled = null; // todo better names
+        static Sprite spriteDisabled = null;
 
         Harmony harmony;
 
@@ -68,7 +52,27 @@ namespace DSPMod
         public static void UIPlanetDetail_Postfix(UIPlanetDetail __instance)
         {
             GameObject go = __instance.gameObject;
+
+            highlightEnabled = new Dictionary<int, bool> {
+                {0, false},
+                {1, false},
+                {2, false},
+                {3, false},
+                {4, false},
+                {5, false},
+                {6, false},
+                {7, false},
+                {8, false},
+                {9, false},
+                {10, false},
+                {11, false},
+                {12, false},
+                {13, false},
+                {14, false},
+                {15, false},
+            };
             Debug.Log("UIPlanetDetail opened.");
+
             /**
              * Structure of gameobjects is (from trial and error and a lot of Debug.Log):
              * planet-detail-ui:
@@ -81,33 +85,36 @@ namespace DSPMod
              *   value-text
              * 
              */
-            // UIRoot.instance.uiGame.planetDetail.transform.GetChild(8).GetComponent;
 
-            Transform[] resGroup = go.transform.Find("res-group").GetComponentsInChildren<Transform>();
-            Sprite tempSprite = resGroup[2].Find("icon").GetComponent<Image>().sprite;
+            Transform resGroup = go.transform.Find("res-group"); //.GetComponentsInChildren<Transform>;
+            if (spriteEnabled == null || spriteDisabled == null)
+            {
+                spriteEnabled = resGroup.GetChild(2).Find("icon").GetComponent<Image>().sprite;  // todo fix actual sprites
+                spriteDisabled = resGroup.GetChild(3).Find("icon").GetComponent<Image>().sprite;
+            }
             foreach (Transform child in resGroup)
             {
-                // Debug.Log(child.gameObject.ToString() + ", has parent: " + child.parent.ToString());
-                if (child.gameObject.name.Contains("res-entry") && !child.Find("net-powana-show-nearest"))
+
+                // Create buttons for resources that exist and are selectable, that don't already have buttons.
+                if (child.gameObject.name.Contains("res-entry") && child.GetComponent<UIResAmountEntry>().refId != 0 && child.GetComponent<UIResAmountEntry>().valueString != "0" && !child.Find("net-powana-show-nearest"))
                 {
+
                     GameObject tempButton = GameObject.Instantiate<GameObject>(
                         original: child.Find("icon").gameObject,
-                        position: new Vector3(child.position.x+0.05f, child.position.y, child.position.z),
+                        position: new Vector3(child.Find("icon").position.x-0.2f, child.position.y, child.position.z),
                         rotation: Quaternion.identity,
                         parent:   child);
 
-                    tempButton.GetComponent<Image>().sprite = tempSprite;
+                    tempButton.GetComponent<Image>().sprite = spriteDisabled;
 
                     UIButton uiButton = tempButton.GetComponent<UIButton>();
                     uiButton.tips.tipTitle = "Show nearest vein";
                     uiButton.tips.tipText = "Moves camera to the nearest vein.";
 
                     int tempRefId = child.GetComponent<UIResAmountEntry>().refId; // ID of resource
-                    uiButton.onClick += (id) => { HighlightVeins(tempRefId); };
+                    uiButton.onClick += (id) => { ToggleVeinHeighlight(tempRefId, ref tempButton); };
                     tempButton.name = "net-powana-show-nearest";
 
-                    
-                    
                 }
                 
             }
@@ -140,37 +147,52 @@ namespace DSPMod
             }
         }
 
-        private static void HighlightVeins(int refId)
+        private static void ToggleVeinHeighlight(int refId, ref GameObject button)
         {
-            Debug.Log("HeighlightVeins called with refId:" + refId.ToString());
-         
 
+            Debug.Log("HeighlightVeins called with refId:" + refId.ToString());
+            if (refId < 0 || refId > 15)
+            {
+                return;
+            }
+            
             // This is the group of gameobjects that contain the following components:
             // RectTransform, CanvasRenderer, UI.Image, UIVeinDetail
             Transform[] veinMarks = GameObject.Find("UI Root/Overlay Canvas/In Game/Scene UIs/Vein Marks/").GetComponentsInChildren<Transform>();
             Vector2 effectDistance = new Vector2(5, 5);
+            Color highlightColor = new Color(1F, 0.4F, 0.23F, 0.88f);  // todo make configurable
+
+            highlightEnabled[refId] = !highlightEnabled[refId];
+            button.GetComponent<Image>().sprite = highlightEnabled[refId] ? spriteEnabled : spriteDisabled;
 
             // Loop through all nodes on planet (all planets?)
             foreach (Transform veinTip in veinMarks)
             {
                 
-                UIVeinDetail veinDetail = veinTip.GetComponent<UIVeinDetail>();
-                if (veinDetail == null) continue;
+                UIVeinDetail uiVeinDetail = veinTip.GetComponent<UIVeinDetail>();
+                if (uiVeinDetail == null) continue;
 
-                foreach (UIVeinDetailNode UIVeinDetailNode in veinDetail.allTips)
+                foreach (UIVeinDetailNode uiVeinDetailNode in uiVeinDetail.allTips)
                 {
                     // Check if the node is of the type we selected, todo: Check if it is also on the right planet.
-                    if ((veinDetail.inspectPlanet != null) && (veinDetail.inspectPlanet.veinGroups[UIVeinDetailNode.veinGroupIndex].type == (EVeinType)refId))
+                    if ((uiVeinDetail.inspectPlanet != null) && (uiVeinDetail.inspectPlanet.veinGroups[uiVeinDetailNode.veinGroupIndex].type == (EVeinType)refId))
                     {
-                        PlanetData.VeinGroup matchingVein = veinDetail.inspectPlanet.veinGroups[UIVeinDetailNode.veinGroupIndex];
-                        Debug.Log("Matching veinGroup found: " + matchingVein.type + " " + matchingVein.amount.ToString() + " at " + matchingVein.pos + " on " + veinDetail.inspectPlanet.name + ". Nodes: " + matchingVein.count.ToString());
+                        PlanetData.VeinGroup matchingVein = uiVeinDetail.inspectPlanet.veinGroups[uiVeinDetailNode.veinGroupIndex];
+                        Debug.Log("Matching veinGroup found: " + matchingVein.type + " " + matchingVein.amount.ToString() + " at " + matchingVein.pos + " on " + uiVeinDetail.inspectPlanet.name + ". Nodes: " + matchingVein.count.ToString());
+
+                        Outline ol = uiVeinDetailNode.GetComponent<Outline>();
+                        if (ol == null)  // Todo make outline pretty
+                        {
+                            ol = uiVeinDetailNode.gameObject.AddComponent(typeof(Outline)) as Outline;
+                            ol.effectColor = highlightColor;
+                            ol.effectDistance = effectDistance;
+                            ol.useGraphicAlpha = true;
+                        }
+                        ol.enabled = highlightEnabled[refId];
                         
-                        Outline ol = UIVeinDetailNode.gameObject.AddComponent(typeof(Outline)) as Outline;
-                        ol.effectColor = Color.red;
-                        ol.effectDistance = effectDistance;
-                        ol.useGraphicAlpha = true;
                     }
                 }
+                
                
             }
         }
