@@ -51,6 +51,7 @@ namespace DSPMod
         [HarmonyPostfix, HarmonyPatch(typeof(UIPlanetDetail), "_OnOpen")]
         public static void UIPlanetDetail_Postfix(UIPlanetDetail __instance)
         {
+
             GameObject go = __instance.gameObject;
 
             highlightEnabled = new Dictionary<int, bool> {
@@ -96,8 +97,9 @@ namespace DSPMod
             {
 
                 // Create buttons for resources that exist and are selectable, that don't already have buttons.
-                if (child.gameObject.name.Contains("res-entry") && child.GetComponent<UIResAmountEntry>().refId != 0 && child.GetComponent<UIResAmountEntry>().valueString != "0" && !child.Find("net-powana-show-nearest"))
+                if (child.gameObject.name.Contains("res-entry") && child.GetComponent<UIResAmountEntry>().refId != 0 && child.GetComponent<UIResAmountEntry>().valueString.Trim() != "0" && !child.Find("net-powana-show-nearest"))
                 {
+                    Debug.Log("Created button for " + (EVeinType)child.GetComponent<UIResAmountEntry>().refId + " Amount: " + child.GetComponent<UIResAmountEntry>().valueString);
 
                     GameObject tempButton = GameObject.Instantiate<GameObject>(
                         original: child.Find("icon").gameObject,
@@ -113,6 +115,7 @@ namespace DSPMod
 
                     int tempRefId = child.GetComponent<UIResAmountEntry>().refId; // ID of resource
                     uiButton.onClick += (id) => { ToggleVeinHeighlight(tempRefId, ref tempButton); };
+                    uiButton.onRightClick += (id) => { debugStuff(id); };
                     tempButton.name = "net-powana-show-nearest";
 
                 }
@@ -147,6 +150,7 @@ namespace DSPMod
             }
         }
 
+        
         private static void ToggleVeinHeighlight(int refId, ref GameObject button)
         {
 
@@ -198,6 +202,38 @@ namespace DSPMod
         }
 
         // Debug methods below
+        private static void debugStuff(int action)
+        {
+            Debug.Log("Debugstuff called: " + action.ToString());
+            /*
+            UIGlobemap globemap = UIRoot.instance.uiGame.globemap;
+            FieldInfo privFade = typeof(UIGlobemap).GetField("fade", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            FieldInfo privFadeTarget = typeof(UIGlobemap).GetField("fadeTarget", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            privFade.SetValue(globemap, 0f);
+            var fadeTarget = privFadeTarget.GetValue(globemap);
+            Debug.Log("fadeTarget value:" + fadeTarget);
+            privFadeTarget.SetValue(globemap, 1f);
+            
+            GameCamera gameCamera = GameCamera.instance;          
+            gameCamera.rtsPoser.yawWanted = 0f;                   
+            gameCamera.rtsPoser.pitchCoefWanted = 0f;
+            gameCamera.rtsPoser.distCoefWanted = 0.7f;
+            gameCamera.rtsPoser.ToWanted();
+            gameCamera.buildPoser.yawWanted = 0f;
+            gameCamera.buildPoser.pitchCoefWanted = 0f;
+            gameCamera.buildPoser.distCoefWanted = 0.7f;
+            gameCamera.buildPoser.ToWanted();
+            // UIRoot.instance.uiGame.globemap.FadeOut();
+            */
+
+            GameCamera gameCamera = GameCamera.instance;
+            PlanetPoser planetPoser = gameCamera.planetPoser;
+            planetPoser.distWanted = planetPoser.distMax;
+            planetPoser.rotationWanted = Quaternion.identity;
+            // planetPoser.ToWanted(); // INSTANTLY SET TO WANTED, NOT CALLING THIS ALLOWS SMOOTH TRANSITION
+
+        }
+
 
         public static string GetComponentsStr(GameObject go)
         {
