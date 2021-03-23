@@ -130,8 +130,7 @@ namespace DSPMod
                     uiButton1.onRightClick += (id) => { DebugStuff(id); };
                     toggleHighlightButton.name = "net-powana-toggle-highlight";
 
-                    Quaternion startRot = GameCamera.instance.planetPoser.rotation;  // Save player pos
-                    uiButton2.onClick += (id) => { ShowNearestVein(tempRefId, startRot, ref showNearestVeinButton); };
+                    uiButton2.onClick += (id) => { ShowNearestVein(tempRefId, ref showNearestVeinButton); };
                     showNearestVeinButton.name = "net-powana-show-nearest";
                     // todo, turn off highlights when exiting globemap?
                 }
@@ -166,49 +165,56 @@ namespace DSPMod
             }
         }
 
-        private static void ShowNearestVein(int refId, Quaternion startRot2, ref GameObject button)
+        private static void ShowNearestVein(int refId, ref GameObject button)
         {
             
-            Debug.Log("Show nearest called with refId: " + refId.ToString() + " startRot: " + startRot2.ToString());
+            Debug.Log("\nShow nearest called with refId: " + refId.ToString());
             
             GameCamera gameCamera = GameCamera.instance;
             PlanetPoser planetPoser = gameCamera.planetPoser;
-            Debug.Log("1");
+            Vector3 playerPos = GameMain.mainPlayer.position;
 
             // (This ended up not working out) Use reflection to get the (private) start rotation of globemap, easier than trying to look for a player position
+            // Todo remove?
+            /*
             UIGlobemap globemap = UIRoot.instance.uiGame.globemap;
             FieldInfo startRotField = typeof(UIGlobemap).GetField("start_rotation", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | BindingFlags.PutRefDispProperty);
             Quaternion startRot = (Quaternion) startRotField.GetValue(globemap);
-            
+            */
 
-            // crash here
             // Get the veins that have a matching refId, using the planetdata of the planet linked to in the planetdetail pane
             PlanetData.VeinGroup[] veins = UIRoot.instance.uiGame.planetDetail.planet.veinGroups;
-            //List<PlanetData.VeinGroup> veins = UIRoot.instance.uiGame.planetDetail.planet.veinGroups.Where(x => x.type == (EVeinType) refId).ToList();
             
             // toRotate can be used with planetPoser to move to vein.pos, default to first vein
             Quaternion toRotate = Quaternion.FromToRotation(Vector3.up, veins[0].pos);
-            float closestAngle = Quaternion.Angle(startRot, toRotate);
 
-            float angleDist;
+            // default to first
+            float closestPosMag = (playerPos.normalized - veins[0].pos).magnitude;
+
             Quaternion tempRotate;
 
             foreach (PlanetData.VeinGroup vein in veins)
             {
-                if (vein.type == (EVeinType) refId) { 
-                    // works but spins the camera, todo: make it not do that, todo: selects the wrong vein.
+                if (vein.type == (EVeinType) refId) {
+                    // Quat to rotate the planet towards
                     tempRotate = Quaternion.FromToRotation(Vector3.up, vein.pos);
-                    angleDist = Quaternion.Angle(startRot, Quaternion.FromToRotation(Vector3.up, vein.pos));
-                    if (angleDist < closestAngle)
+
+                    if ((playerPos.normalized - vein.pos).magnitude < closestPosMag )
                     {
-                        closestAngle = angleDist;
+                        closestPosMag = (playerPos.normalized - vein.pos).magnitude;
                         toRotate = tempRotate;
                     }
                 }
             }
+
+            // wip, todo make it not rotate only north, keep current rotation
+            Vector3 vector3 = toRotate * Vector3.up;
+            Vector3 up = Vector3.up;
+            Vector3 normalized = Vector3.Cross(vector3, up).normalized;
+            toRotate = Quaternion.LookRotation(Vector3.Cross(normalized, vector3), vector3);
+
             planetPoser.rotationWanted = toRotate;
             planetPoser.distWanted = planetPoser.distMax;
-            
         }
 
         private static void ToggleVeinHeighlight(int refId, ref GameObject button)
@@ -219,7 +225,6 @@ namespace DSPMod
             {
                 return;
             }
-
             
             // This is the group of gameobjects that contain the following components:
             // RectTransform, CanvasRenderer, UI.Image, UIVeinDetail
@@ -270,31 +275,18 @@ namespace DSPMod
         private static void DebugStuff(int action)
         {
             Debug.Log("Debugstuff called: " + action.ToString());
-            /*
-            UIGlobemap globemap = UIRoot.instance.uiGame.globemap;
-            FieldInfo privFade = typeof(UIGlobemap).GetField("fade", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            FieldInfo privFadeTarget = typeof(UIGlobemap).GetField("fadeTarget", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            privFade.SetValue(globemap, 0f);
-            var fadeTarget = privFadeTarget.GetValue(globemap);
-            Debug.Log("fadeTarget value:" + fadeTarget);
-            privFadeTarget.SetValue(globemap, 1f);
-            
-            GameCamera gameCamera = GameCamera.instance;          
-            gameCamera.rtsPoser.yawWanted = 0f;                   
-            gameCamera.rtsPoser.pitchCoefWanted = 0f;
-            gameCamera.rtsPoser.distCoefWanted = 0.7f;
-            gameCamera.rtsPoser.ToWanted();
-            gameCamera.buildPoser.yawWanted = 0f;
-            gameCamera.buildPoser.pitchCoefWanted = 0f;
-            gameCamera.buildPoser.distCoefWanted = 0.7f;
-            gameCamera.buildPoser.ToWanted();
-            // UIRoot.instance.uiGame.globemap.FadeOut();
-            */
 
             GameCamera gameCamera = GameCamera.instance;
             PlanetPoser planetPoser = gameCamera.planetPoser;
+            Debug.Log("1");
+
+            // (This ended up not working out) Use reflection to get the (private) start rotation of globemap, easier than trying to look for a player position
+            UIGlobemap globemap = UIRoot.instance.uiGame.globemap;
+            FieldInfo startRotField = typeof(UIGlobemap).GetField("start_rotation", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | BindingFlags.PutRefDispProperty);
+            Quaternion startRot = (Quaternion)startRotField.GetValue(globemap);
+
+            planetPoser.rotationWanted = startRot;
             planetPoser.distWanted = planetPoser.distMax;
-            planetPoser.rotationWanted = Quaternion.identity;
 
             // planetPoser.ToWanted(); // INSTANTLY SET TO WANTED, NOT CALLING THIS ALLOWS SMOOTH TRANSITION
 
