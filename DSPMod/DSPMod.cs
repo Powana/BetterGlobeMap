@@ -9,7 +9,6 @@ using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 using System.IO;
-using System.Threading.Tasks;
 
 
 namespace DSPMod
@@ -19,7 +18,7 @@ namespace DSPMod
     {
         public const string pluginGuid = "net.powana.plugins.DSPMod";
         public const string pluginName = "Test plugin for DSP";
-        public const string pluginVersion = "0.0.0.1";
+        public const string pluginVersion = "0.1.0.1";
 
         static Dictionary<int, bool> highlightEnabled;
         static Sprite spriteEnabled = null; // todo better names
@@ -96,30 +95,47 @@ namespace DSPMod
             foreach (Transform child in resGroup)
             {
 
-                // Create buttons for resources that exist and are selectable, that don't already have buttons.
+                // Create buttons for resources that exist and are selectable, that don't already have buttons. todo: fix bugged refids on solar and ocean
                 if (child.gameObject.name.Contains("res-entry") && child.GetComponent<UIResAmountEntry>().refId != 0 && child.GetComponent<UIResAmountEntry>().valueString.Trim() != "0" && !child.Find("net-powana-show-nearest"))
                 {
-                    Debug.Log("Created button for " + (EVeinType)child.GetComponent<UIResAmountEntry>().refId + " Amount: " + child.GetComponent<UIResAmountEntry>().valueString);
+                    Debug.Log("Created buttons for " + (EVeinType)child.GetComponent<UIResAmountEntry>().refId + " Amount: " + child.GetComponent<UIResAmountEntry>().valueString);
 
-                    GameObject tempButton = GameObject.Instantiate<GameObject>(
-                        original: child.Find("icon").gameObject,
-                        position: new Vector3(child.Find("icon").position.x-0.2f, child.position.y, child.position.z),
+                    int tempRefId = child.GetComponent<UIResAmountEntry>().refId; // ID of resource
+                    Transform iconTransform = child.Find("icon"); 
+
+                    GameObject toggleHighlightButton = GameObject.Instantiate<GameObject>(
+                        original: iconTransform.gameObject,
+                        position: new Vector3(iconTransform.position.x-0.2f, child.position.y, child.position.z),
                         rotation: Quaternion.identity,
                         parent:   child);
 
-                    tempButton.GetComponent<Image>().sprite = spriteDisabled;
+                    GameObject showNearestVeinButton = GameObject.Instantiate<GameObject>(
+                        original: iconTransform.gameObject,
+                        position: new Vector3(iconTransform.position.x-0.4f, child.position.y, child.position.z),
+                        rotation: Quaternion.identity,
+                        parent:   child);
 
-                    UIButton uiButton = tempButton.GetComponent<UIButton>();
-                    uiButton.tips.tipTitle = "Show nearest vein";
-                    uiButton.tips.tipText = "Moves camera to the nearest vein.";
+                    toggleHighlightButton.GetComponent<Image>().sprite = spriteDisabled;
+                    showNearestVeinButton.GetComponent<Image>().sprite = spriteDisabled;
 
-                    int tempRefId = child.GetComponent<UIResAmountEntry>().refId; // ID of resource
-                    uiButton.onClick += (id) => { ToggleVeinHeighlight(tempRefId, ref tempButton); };
-                    uiButton.onRightClick += (id) => { debugStuff(id); };
-                    tempButton.name = "net-powana-show-nearest";
+                    UIButton uiButton1 = toggleHighlightButton.GetComponent<UIButton>();
+                    uiButton1.tips.tipTitle = "Highlight";
+                    uiButton1.tips.tipText = "Highlight veins of the type: " + (EVeinType) tempRefId + ".";
 
+                    UIButton uiButton2 = showNearestVeinButton.GetComponent<UIButton>();
+                    uiButton2.tips.tipTitle = "Show nearest vein";
+                    uiButton2.tips.tipText = "Move camera to the " + (EVeinType) tempRefId + " nearest the player";
+
+                    uiButton1.onClick += (id) => { ToggleVeinHeighlight(tempRefId, ref toggleHighlightButton); };
+                    uiButton1.onRightClick += (id) => { DebugStuff(id); };
+                    toggleHighlightButton.name = "net-powana-toggle-highlight";
+
+                    Quaternion startRot = GameCamera.instance.planetPoser.rotation;  // Save player pos
+                    uiButton2.onClick += (id) => { ShowNearestVein(tempRefId, startRot, ref showNearestVeinButton); };
+                    showNearestVeinButton.name = "net-powana-show-nearest";
+                    // todo, turn off highlights when exiting globemap?
                 }
-                
+
             }
            
             foreach (UIResAmountEntry res in __instance.entries)
@@ -150,7 +166,51 @@ namespace DSPMod
             }
         }
 
-        
+        private static void ShowNearestVein(int refId, Quaternion startRot2, ref GameObject button)
+        {
+            
+            Debug.Log("Show nearest called with refId: " + refId.ToString() + " startRot: " + startRot2.ToString());
+            
+            GameCamera gameCamera = GameCamera.instance;
+            PlanetPoser planetPoser = gameCamera.planetPoser;
+            Debug.Log("1");
+
+            // (This ended up not working out) Use reflection to get the (private) start rotation of globemap, easier than trying to look for a player position
+            UIGlobemap globemap = UIRoot.instance.uiGame.globemap;
+            FieldInfo startRotField = typeof(UIGlobemap).GetField("start_rotation", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | BindingFlags.PutRefDispProperty);
+            Quaternion startRot = (Quaternion) startRotField.GetValue(globemap);
+            
+
+            // crash here
+            // Get the veins that have a matching refId, using the planetdata of the planet linked to in the planetdetail pane
+            PlanetData.VeinGroup[] veins = UIRoot.instance.uiGame.planetDetail.planet.veinGroups;
+            //List<PlanetData.VeinGroup> veins = UIRoot.instance.uiGame.planetDetail.planet.veinGroups.Where(x => x.type == (EVeinType) refId).ToList();
+            
+            // toRotate can be used with planetPoser to move to vein.pos, default to first vein
+            Quaternion toRotate = Quaternion.FromToRotation(Vector3.up, veins[0].pos);
+            float closestAngle = Quaternion.Angle(startRot, toRotate);
+
+            float angleDist;
+            Quaternion tempRotate;
+
+            foreach (PlanetData.VeinGroup vein in veins)
+            {
+                if (vein.type == (EVeinType) refId) { 
+                    // works but spins the camera, todo: make it not do that, todo: selects the wrong vein.
+                    tempRotate = Quaternion.FromToRotation(Vector3.up, vein.pos);
+                    angleDist = Quaternion.Angle(startRot, Quaternion.FromToRotation(Vector3.up, vein.pos));
+                    if (angleDist < closestAngle)
+                    {
+                        closestAngle = angleDist;
+                        toRotate = tempRotate;
+                    }
+                }
+            }
+            planetPoser.rotationWanted = toRotate;
+            planetPoser.distWanted = planetPoser.distMax;
+            
+        }
+
         private static void ToggleVeinHeighlight(int refId, ref GameObject button)
         {
 
@@ -159,6 +219,7 @@ namespace DSPMod
             {
                 return;
             }
+
             
             // This is the group of gameobjects that contain the following components:
             // RectTransform, CanvasRenderer, UI.Image, UIVeinDetail
@@ -193,7 +254,9 @@ namespace DSPMod
                             ol.useGraphicAlpha = true;
                         }
                         ol.enabled = highlightEnabled[refId];
-                        
+
+
+
                     }
                 }
                 
@@ -201,8 +264,10 @@ namespace DSPMod
             }
         }
 
+
+
         // Debug methods below
-        private static void debugStuff(int action)
+        private static void DebugStuff(int action)
         {
             Debug.Log("Debugstuff called: " + action.ToString());
             /*
@@ -230,6 +295,7 @@ namespace DSPMod
             PlanetPoser planetPoser = gameCamera.planetPoser;
             planetPoser.distWanted = planetPoser.distMax;
             planetPoser.rotationWanted = Quaternion.identity;
+
             // planetPoser.ToWanted(); // INSTANTLY SET TO WANTED, NOT CALLING THIS ALLOWS SMOOTH TRANSITION
 
         }
@@ -253,7 +319,6 @@ namespace DSPMod
             }
             return s;
         }
-
 
         public static string GetPath(Transform current)
         {
