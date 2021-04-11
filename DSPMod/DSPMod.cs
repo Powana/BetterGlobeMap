@@ -7,6 +7,7 @@ using System.Text;
 using BepInEx;
 using HarmonyLib; 
 using UnityEngine;
+//using UnityEngine.ImageConversionModule;
 using UnityEngine.UI;
 using System.IO;
 
@@ -20,9 +21,13 @@ namespace DSPMod
         public const string pluginName = "Test plugin for DSP";
         public const string pluginVersion = "0.1.0.1";
 
+        private static Color enabledButtonColor = new Color(83f, 202f, 252f, 0.4f);
+        private static Color defaultHighlightColor;
+
         static Dictionary<int, bool> highlightEnabled;
-        static Sprite spriteEnabled = null; // todo better names
-        static Sprite spriteDisabled = null;
+        static AssetBundle bundle;
+        static Sprite spriteShowNearest = null; // todo better names
+        static Sprite spriteHighlight = null;
 
         Harmony harmony;
 
@@ -30,6 +35,12 @@ namespace DSPMod
         void Awake()
         {
             harmony = new Harmony(pluginGuid);
+            string pluginfolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            bundle = AssetBundle.LoadFromFile($"{pluginfolder}/net-powana-bgm-bundle");
+
+            spriteShowNearest = bundle.LoadAsset<Sprite>("assets/ui/iconHighlight.png");
+            spriteHighlight = spriteShowNearest;
+
             harmony.PatchAll(typeof(DSPMod));
             Debug.Log("Better globe map started!");
             
@@ -87,11 +98,7 @@ namespace DSPMod
              */
 
             Transform resGroup = go.transform.Find("res-group"); //.GetComponentsInChildren<Transform>;
-            if (spriteEnabled == null || spriteDisabled == null)
-            {
-                spriteEnabled = resGroup.GetChild(2).Find("icon").GetComponent<Image>().sprite;  // todo fix actual sprites
-                spriteDisabled = resGroup.GetChild(3).Find("icon").GetComponent<Image>().sprite;
-            }
+            
             foreach (Transform child in resGroup)
             {
 
@@ -100,23 +107,31 @@ namespace DSPMod
                 {
                     Debug.Log("Created buttons for " + (EVeinType)child.GetComponent<UIResAmountEntry>().refId + " Amount: " + child.GetComponent<UIResAmountEntry>().valueString);
 
-                    int tempRefId = child.GetComponent<UIResAmountEntry>().refId; // ID of resource
+                    int tempRefId = (int) child.GetComponent<UIResAmountEntry>().refId; // ID of resource
                     Transform iconTransform = child.Find("icon"); 
 
                     GameObject toggleHighlightButton = GameObject.Instantiate<GameObject>(
                         original: iconTransform.gameObject,
-                        position: new Vector3(iconTransform.position.x-0.2f, child.position.y, child.position.z),
+                        position: new Vector3(child.position.x+1f, child.position.y-0.02f, child.position.z),
                         rotation: Quaternion.identity,
                         parent:   child);
 
                     GameObject showNearestVeinButton = GameObject.Instantiate<GameObject>(
                         original: iconTransform.gameObject,
-                        position: new Vector3(iconTransform.position.x-0.4f, child.position.y, child.position.z),
+                        position: new Vector3(child.position.x+1.25f, child.position.y-0.02f, child.position.z),
                         rotation: Quaternion.identity,
                         parent:   child);
 
-                    toggleHighlightButton.GetComponent<Image>().sprite = spriteDisabled;
-                    showNearestVeinButton.GetComponent<Image>().sprite = spriteDisabled;
+                    Image highlightImage = toggleHighlightButton.GetComponent<Image>();
+                    highlightImage.sprite = spriteHighlight;
+                    highlightImage.preserveAspect = true;
+                    highlightImage.rectTransform.sizeDelta = new Vector2(28, 14);
+                    defaultHighlightColor = highlightImage.color; // Store the default color so we can switch back later
+
+                    Image showNearestImage = showNearestVeinButton.GetComponent<Image>();
+                    showNearestImage.sprite = spriteShowNearest;
+                    showNearestImage.preserveAspect = true;
+                    showNearestImage.rectTransform.sizeDelta = new Vector2(28, 14);
 
                     UIButton uiButton1 = toggleHighlightButton.GetComponent<UIButton>();
                     uiButton1.tips.tipTitle = "Highlight";
@@ -127,7 +142,7 @@ namespace DSPMod
                     uiButton2.tips.tipText = "Move camera to the " + (EVeinType) tempRefId + " nearest the player";
 
                     uiButton1.onClick += (id) => { ToggleVeinHeighlight(tempRefId, ref toggleHighlightButton); };
-                    uiButton1.onRightClick += (id) => { DebugStuff(id); };
+                    uiButton1.onRightClick += (id) => { DebugStuff(tempRefId); };
                     toggleHighlightButton.name = "net-powana-toggle-highlight";
 
                     uiButton2.onClick += (id) => { ShowNearestVein(tempRefId, ref showNearestVeinButton); };
@@ -215,10 +230,12 @@ namespace DSPMod
 
             planetPoser.rotationWanted = toRotate;
             planetPoser.distWanted = planetPoser.distMax;
+
         }
 
         private static void ToggleVeinHeighlight(int refId, ref GameObject button)
         {
+            // Todo: OIL AND COAL FLIP FFS, doesnt do anything on first click
 
             Debug.Log("HeighlightVeins called with refId:" + refId.ToString());
             if (refId < 0 || refId > 15)
@@ -232,8 +249,6 @@ namespace DSPMod
             Vector2 effectDistance = new Vector2(5, 5);
             Color highlightColor = new Color(1F, 0.4F, 0.23F, 0.88f);  // todo make configurable
 
-            highlightEnabled[refId] = !highlightEnabled[refId];
-            button.GetComponent<Image>().sprite = highlightEnabled[refId] ? spriteEnabled : spriteDisabled;
 
             // Loop through all nodes on planet (all planets?)
             foreach (Transform veinTip in veinMarks)
@@ -248,7 +263,6 @@ namespace DSPMod
                     if ((uiVeinDetail.inspectPlanet != null) && (uiVeinDetail.inspectPlanet.veinGroups[uiVeinDetailNode.veinGroupIndex].type == (EVeinType)refId))
                     {
                         PlanetData.VeinGroup matchingVein = uiVeinDetail.inspectPlanet.veinGroups[uiVeinDetailNode.veinGroupIndex];
-                        Debug.Log("Matching veinGroup found: " + matchingVein.type + " " + matchingVein.amount.ToString() + " at " + matchingVein.pos + " on " + uiVeinDetail.inspectPlanet.name + ". Nodes: " + matchingVein.count.ToString());
 
                         Outline ol = uiVeinDetailNode.GetComponent<Outline>();
                         if (ol == null)  // Todo make outline pretty
@@ -259,17 +273,14 @@ namespace DSPMod
                             ol.useGraphicAlpha = true;
                         }
                         ol.enabled = highlightEnabled[refId];
-
-
-
                     }
                 }
-                
-               
             }
+
+            highlightEnabled[refId] = !highlightEnabled[refId];
+            Image img = button.GetComponent<Image>();
+            img.color = highlightEnabled[refId] ? enabledButtonColor : defaultHighlightColor;
         }
-
-
 
         // Debug methods below
         private static void DebugStuff(int action)
