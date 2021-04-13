@@ -27,7 +27,7 @@ namespace DSPMod
         static bool[] highlightEnabled = new bool[15];
         static bool[] buttonCreated = new bool[15]; //  Needed because the refIds of resourced bug out, this ensures no duplicate buttons are created
         static AssetBundle bundle;
-        static Sprite spriteShowNearest = null; // todo better names
+        static Sprite spriteShowNearest = null;
         static Sprite spriteHighlight = null;
 
         Harmony harmony;
@@ -80,7 +80,7 @@ namespace DSPMod
              * 
              */
 
-            Transform resGroup = go.transform.Find("res-group"); //.GetComponentsInChildren<Transform>;
+            Transform resGroup = go.transform.Find("res-group");
             int i = 0;
             foreach (Transform child in resGroup)
             {
@@ -139,11 +139,6 @@ namespace DSPMod
 
             }
 
-        }
-
-        private static int TempStuff(GameObject obj)
-        {
-            return obj.GetComponent<UIResAmountEntry>().refId;
         }
 
         private static void ShowNearestVein(int refId, ref GameObject button)
@@ -248,24 +243,28 @@ namespace DSPMod
             img.color = highlightEnabled[refId] ? enabledButtonColor : defaultHighlightColor;
         }
 
+        // This is the detail view to the right in globe view, todo: not to this every game tick? find better method to bind to.
+        [HarmonyPostfix, HarmonyPatch(typeof(PlayerController), "GameTick")]
+        private static void MoveTo()
+        {
+            Debug.Log(GameMain.data.mainPlayer.controller.gameData.disableController);
+            if (VFInput._rtsMove.onDown) {
+                Debug.Log("rtsMove down");
+                PlayerController playerController = GameMain.data.mainPlayer.controller;
+                RaycastHit hitInfo;
+                if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hitInfo, 800f, 8720, QueryTriggerInteraction.Collide))
+                {
+                    Debug.Log("Raycast");
+                    GameMain.data.mainPlayer.Order(OrderNode.MoveTo(hitInfo.point), (bool)VFInput._multiOrdering);
+                }
+            }
+        }
+
         // Debug methods below
         private static void DebugStuff(int action)
         {
             Debug.Log("Debugstuff called: " + action.ToString());
-
-            GameCamera gameCamera = GameCamera.instance;
-            PlanetPoser planetPoser = gameCamera.planetPoser;
-            Debug.Log("1");
-
-            // (This ended up not working out) Use reflection to get the (private) start rotation of globemap, easier than trying to look for a player position
-            UIGlobemap globemap = UIRoot.instance.uiGame.globemap;
-            FieldInfo startRotField = typeof(UIGlobemap).GetField("start_rotation", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | BindingFlags.PutRefDispProperty);
-            Quaternion startRot = (Quaternion)startRotField.GetValue(globemap);
-
-            planetPoser.rotationWanted = startRot;
-            planetPoser.distWanted = planetPoser.distMax;
-
-            // planetPoser.ToWanted(); // INSTANTLY SET TO WANTED, NOT CALLING THIS ALLOWS SMOOTH TRANSITION
+            
 
         }
 
