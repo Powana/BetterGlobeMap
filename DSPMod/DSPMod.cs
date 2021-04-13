@@ -21,10 +21,11 @@ namespace DSPMod
         public const string pluginName = "Test plugin for DSP";
         public const string pluginVersion = "0.1.0.1";
 
-        private static Color enabledButtonColor = new Color(83f, 202f, 252f, 0.4f);
+        private static Color enabledButtonColor = new Color(83f, 202f, 252f, 0.6f);
         private static Color defaultHighlightColor;
 
-        static Dictionary<int, bool> highlightEnabled;
+        static bool[] highlightEnabled = new bool[15];
+        static bool[] buttonCreated = new bool[15]; //  Needed because the refIds of resourced bug out, this ensures no duplicate buttons are created
         static AssetBundle bundle;
         static Sprite spriteShowNearest = null; // todo better names
         static Sprite spriteHighlight = null;
@@ -64,24 +65,6 @@ namespace DSPMod
 
             GameObject go = __instance.gameObject;
 
-            highlightEnabled = new Dictionary<int, bool> {
-                {0, false},
-                {1, false},
-                {2, false},
-                {3, false},
-                {4, false},
-                {5, false},
-                {6, false},
-                {7, false},
-                {8, false},
-                {9, false},
-                {10, false},
-                {11, false},
-                {12, false},
-                {13, false},
-                {14, false},
-                {15, false},
-            };
             Debug.Log("UIPlanetDetail opened.");
 
             /**
@@ -98,14 +81,13 @@ namespace DSPMod
              */
 
             Transform resGroup = go.transform.Find("res-group"); //.GetComponentsInChildren<Transform>;
-            
+            int i = 0;
             foreach (Transform child in resGroup)
             {
 
                 // Create buttons for resources that exist and are selectable, that don't already have buttons. todo: fix bugged refids on solar and ocean
-                if (child.gameObject.name.Contains("res-entry") && child.GetComponent<UIResAmountEntry>().refId != 0 && child.GetComponent<UIResAmountEntry>().valueString.Trim() != "0" && !child.Find("net-powana-show-nearest"))
+                if (child.gameObject.name.Contains("res-entry") && child.GetComponent<UIResAmountEntry>().refId != 0 && !buttonCreated[child.GetComponent<UIResAmountEntry>().refId] && child.GetComponent<UIResAmountEntry>().valueString.Trim() != "0")
                 {
-                    Debug.Log("Created buttons for " + (EVeinType)child.GetComponent<UIResAmountEntry>().refId + " Amount: " + child.GetComponent<UIResAmountEntry>().valueString);
 
                     int tempRefId = (int) child.GetComponent<UIResAmountEntry>().refId; // ID of resource
                     Transform iconTransform = child.Find("icon"); 
@@ -114,13 +96,13 @@ namespace DSPMod
                         original: iconTransform.gameObject,
                         position: new Vector3(child.position.x+1f, child.position.y-0.02f, child.position.z),
                         rotation: Quaternion.identity,
-                        parent:   child);
+                        parent:   child.parent); // The child object (res-entry) actually moves each time the map is opened for some reason
 
                     GameObject showNearestVeinButton = GameObject.Instantiate<GameObject>(
                         original: iconTransform.gameObject,
                         position: new Vector3(child.position.x+1.25f, child.position.y-0.02f, child.position.z),
                         rotation: Quaternion.identity,
-                        parent:   child);
+                        parent:   child.parent);
 
                     Image highlightImage = toggleHighlightButton.GetComponent<Image>();
                     highlightImage.sprite = spriteHighlight;
@@ -134,7 +116,8 @@ namespace DSPMod
                     showNearestImage.rectTransform.sizeDelta = new Vector2(28, 14);
 
                     UIButton uiButton1 = toggleHighlightButton.GetComponent<UIButton>();
-                    uiButton1.tips.tipTitle = "Highlight";
+
+                    uiButton1.tips.tipTitle = "Highlight" + i.ToString();
                     uiButton1.tips.tipText = "Highlight veins of the type: " + (EVeinType) tempRefId + ".";
 
                     UIButton uiButton2 = showNearestVeinButton.GetComponent<UIButton>();
@@ -147,37 +130,20 @@ namespace DSPMod
 
                     uiButton2.onClick += (id) => { ShowNearestVein(tempRefId, ref showNearestVeinButton); };
                     showNearestVeinButton.name = "net-powana-show-nearest";
+
                     // todo, turn off highlights when exiting globemap?
+                    buttonCreated[tempRefId] = true;
+                    Debug.Log("Created buttons for " + (EVeinType)child.GetComponent<UIResAmountEntry>().refId + " Amount: " + child.GetComponent<UIResAmountEntry>().valueString);
+                    i++;
                 }
 
             }
-           
-            foreach (UIResAmountEntry res in __instance.entries)
-            {
-                /**
-                 * res.refId contains the id of the resource counted. According to the enum EVeinType:
-                 * 0 = None, used for non-mineral resources ie. ocean type, construction area, wind/solar energy ratio etc.
-                 * Iron = 1,
-                 * Copper = 2,
-                 * Silicium = 3,
-                 * Titanium = 4,
-                 * Stone = 5,
-                 * Coal = 6,
-                 * Oil = 7,
-                 * Fireice = 8,
-                 * Diamond = 9,
-                 * Fractal = 10,
-                 * Crysrub = 11,
-                 * Grat = 12,
-                 * Bamboo = 13,
-                 * Mag = 14,
-                 * Max = 15
-                 * 
-                 * Non-mineral resources (area, wind energy ratio, solar energy ratio etc.) do not have a stringbuilder attached.
-                 */
-                // Debug.Log((EVeinType) res.refId + ": " + res.valueString);
-                // if (res.sb != null) Debug.Log(res.sb.ToString());
-            }
+
+        }
+
+        private static int TempStuff(GameObject obj)
+        {
+            return obj.GetComponent<UIResAmountEntry>().refId;
         }
 
         private static void ShowNearestVein(int refId, ref GameObject button)
@@ -249,7 +215,8 @@ namespace DSPMod
             Vector2 effectDistance = new Vector2(5, 5);
             Color highlightColor = new Color(1F, 0.4F, 0.23F, 0.88f);  // todo make configurable
 
-
+            highlightEnabled[refId] = !highlightEnabled[refId];
+            
             // Loop through all nodes on planet (all planets?)
             foreach (Transform veinTip in veinMarks)
             {
@@ -277,7 +244,6 @@ namespace DSPMod
                 }
             }
 
-            highlightEnabled[refId] = !highlightEnabled[refId];
             Image img = button.GetComponent<Image>();
             img.color = highlightEnabled[refId] ? enabledButtonColor : defaultHighlightColor;
         }
@@ -303,6 +269,13 @@ namespace DSPMod
 
         }
 
+        private static void AddRedOutline(ref GameObject gameObject)
+        {
+            Outline ol = gameObject.AddComponent(typeof(Outline)) as Outline;
+            ol.effectColor = Color.red;
+            ol.effectDistance = new Vector2(3, 3);
+            ol.useGraphicAlpha = true;
+        }
 
         public static string GetComponentsStr(GameObject go)
         {
