@@ -81,7 +81,6 @@ namespace DSPMod
              */
 
             Transform resGroup = go.transform.Find("res-group");
-            int i = 0;
             foreach (Transform child in resGroup)
             {
 
@@ -125,7 +124,7 @@ namespace DSPMod
                     uiButton2.tips.tipText = "Move camera to the " + (EVeinType) tempRefId + " nearest the player";
 
                     uiButton1.onClick += (id) => { ToggleVeinHeighlight(tempRefId, ref toggleHighlightButton); };
-                    uiButton1.onRightClick += (id) => { DebugStuff(tempRefId); };
+                    uiButton1.onRightClick += (id) => { DebugStuff(tempRefId); };  // TODO: Remove
                     toggleHighlightButton.name = "net-powana-toggle-highlight";
 
                     uiButton2.onClick += (id) => { ShowNearestVein(tempRefId, ref showNearestVeinButton); };
@@ -134,7 +133,6 @@ namespace DSPMod
                     // todo, turn off highlights when exiting globemap?
                     buttonCreated[tempRefId] = true;
                     Debug.Log("Created buttons for " + (EVeinType)child.GetComponent<UIResAmountEntry>().refId + " Amount: " + child.GetComponent<UIResAmountEntry>().valueString);
-                    i++;
                 }
 
             }
@@ -149,14 +147,6 @@ namespace DSPMod
             GameCamera gameCamera = GameCamera.instance;
             PlanetPoser planetPoser = gameCamera.planetPoser;
             Vector3 playerPos = GameMain.mainPlayer.position;
-
-            // (This ended up not working out) Use reflection to get the (private) start rotation of globemap, easier than trying to look for a player position
-            // Todo remove?
-            /*
-            UIGlobemap globemap = UIRoot.instance.uiGame.globemap;
-            FieldInfo startRotField = typeof(UIGlobemap).GetField("start_rotation", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | BindingFlags.PutRefDispProperty);
-            Quaternion startRot = (Quaternion) startRotField.GetValue(globemap);
-            */
 
             // Get the veins that have a matching refId, using the planetdata of the planet linked to in the planetdetail pane
             PlanetData.VeinGroup[] veins = UIRoot.instance.uiGame.planetDetail.planet.veinGroups;
@@ -196,7 +186,6 @@ namespace DSPMod
 
         private static void ToggleVeinHeighlight(int refId, ref GameObject button)
         {
-            // Todo: OIL AND COAL FLIP FFS, doesnt do anything on first click
 
             Debug.Log("HeighlightVeins called with refId:" + refId.ToString());
             if (refId < 0 || refId > 15)
@@ -243,7 +232,7 @@ namespace DSPMod
             img.color = highlightEnabled[refId] ? enabledButtonColor : defaultHighlightColor;
         }
 
-        // This is the detail view to the right in globe view, todo: not to this every game tick? find better method to bind to.
+        // This is the detail view to the right in globe view, todo: not to this every game tick? find better method to bind to. TODO: Check if player is dragging
         [HarmonyPostfix, HarmonyPatch(typeof(PlayerController), "GameTick")]
         private static void MoveTo()
         {
