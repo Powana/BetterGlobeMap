@@ -7,8 +7,8 @@
     <ProjectGuid>{466D0939-774E-4632-ACBE-33E00CAC4642}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DSPMod</RootNamespace>
-    <AssemblyName>DSPMod</AssemblyName>
+    <RootNamespace>BetterGlobeMap</RootNamespace>
+    <AssemblyName>BetterGlobeMap</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -74,7 +74,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DSPMod.cs" />
+    <Compile Include="BetterGlobeMap.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

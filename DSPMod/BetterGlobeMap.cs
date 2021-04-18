@@ -7,15 +7,14 @@ using System.Text;
 using BepInEx;
 using HarmonyLib; 
 using UnityEngine;
-//using UnityEngine.ImageConversionModule;
 using UnityEngine.UI;
 using System.IO;
 
 
-namespace DSPMod
+namespace BetterGlobeMap
 {
     [BepInPlugin(pluginGuid, pluginName, pluginVersion)]
-    public class DSPMod : BaseUnityPlugin
+    public class BetterGlobeMap : BaseUnityPlugin
     {
         public const string pluginGuid = "net.powana.plugins.DSP.BGM";
         public const string pluginName = "Better Globe Map";
@@ -49,7 +48,7 @@ namespace DSPMod
             spriteShowNearest = bundle.LoadAsset<Sprite>("assets/ui/iconNearest.png");
             spriteHighlight = bundle.LoadAsset<Sprite>("assets/ui/iconHighlight.png");
 
-            harmony.PatchAll(typeof(DSPMod));
+            harmony.PatchAll(typeof(BetterGlobeMap));
             Debug.Log("Better Globe Map started!");
             
         }
@@ -60,8 +59,6 @@ namespace DSPMod
         {
 
             GameObject go = __instance.gameObject;
-
-            Debug.Log("UIPlanetDetail opened.");
 
             /**
              * Structure of gameobjects is (from trial and error and a lot of Debug.Log):
@@ -237,7 +234,6 @@ namespace DSPMod
 
             if (VFInput._rtsMove.onDown)
             {
-                dragBeginTick = GameMain.gameTick;
                 dragBeginMousePosition = Input.mousePosition;
                 Debug.Log(GameMain.gameTick.ToString());
                 hit = Physics.Raycast(Camera.main.ScreenPointToRay(dragBeginMousePosition), out hitInfo, 800f, 8720, QueryTriggerInteraction.Collide);
