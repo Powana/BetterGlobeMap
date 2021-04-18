@@ -17,18 +17,25 @@ namespace DSPMod
     [BepInPlugin(pluginGuid, pluginName, pluginVersion)]
     public class DSPMod : BaseUnityPlugin
     {
-        public const string pluginGuid = "net.powana.plugins.DSPMod";
-        public const string pluginName = "Test plugin for DSP";
-        public const string pluginVersion = "0.1.0.1";
-
-        private static Color enabledButtonColor = new Color(83f, 202f, 252f, 0.6f);
-        private static Color defaultHighlightColor;
+        public const string pluginGuid = "net.powana.plugins.DSP.BGM";
+        public const string pluginName = "Better Globe Map";
+        public const string pluginVersion = "1.0.0.0";
 
         static bool[] highlightEnabled = new bool[15];
         static bool[] buttonCreated = new bool[15]; //  Needed because the refIds of resourced bug out, this ensures no duplicate buttons are created
         static AssetBundle bundle;
         static Sprite spriteShowNearest = null;
         static Sprite spriteHighlight = null;
+
+        private static Color enabledButtonColor = new Color(83f, 202f, 252f, 0.5f); // Colour that is set on activated button
+        private static Color defaultHighlightButtonColor;                           // Colour of highlight button
+        private static Color highlightColor = new Color(1F, 0.22F, 0.11F, 0.95f);      // Colour of vein highlights todo make configurable
+        private static Vector2 effectDistance = new Vector2(5, 5);  // Size of highlight outline
+
+        private static RaycastHit hitInfo = new RaycastHit();
+        private static bool hit = false;
+
+        private static Vector3 dragBeginMousePosition;
 
         Harmony harmony;
 
@@ -39,23 +46,12 @@ namespace DSPMod
             string pluginfolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             bundle = AssetBundle.LoadFromFile($"{pluginfolder}/net-powana-bgm-bundle");
 
-            spriteShowNearest = bundle.LoadAsset<Sprite>("assets/ui/iconHighlight.png");
-            spriteHighlight = spriteShowNearest;
+            spriteShowNearest = bundle.LoadAsset<Sprite>("assets/ui/iconNearest.png");
+            spriteHighlight = bundle.LoadAsset<Sprite>("assets/ui/iconHighlight.png");
 
             harmony.PatchAll(typeof(DSPMod));
-            Debug.Log("Better globe map started!");
+            Debug.Log("Better Globe Map started!");
             
-        }
-        [HarmonyPrefix, HarmonyPatch(typeof(GameMain), "Begin")]
-        public static void GameMain_Begin_Prefix()
-        {
-            Debug.Log("Game main begin.");
-        }
-
-        [HarmonyPostfix, HarmonyPatch(typeof(UIGlobemap), "_OnOpen")]
-        public static void UIGlobeMap_OnOpen(UIGlobemap __instance)
-        {
-            Debug.Log("Globe map opened.");
         }
 
         // This is the detail view to the right in globe view
@@ -84,7 +80,7 @@ namespace DSPMod
             foreach (Transform child in resGroup)
             {
 
-                // Create buttons for resources that exist and are selectable, that don't already have buttons. todo: fix bugged refids on solar and ocean
+                // Create buttons for resources that exist and are selectable, that don't already have buttons.
                 if (child.gameObject.name.Contains("res-entry") && child.GetComponent<UIResAmountEntry>().refId != 0 && !buttonCreated[child.GetComponent<UIResAmountEntry>().refId] && child.GetComponent<UIResAmountEntry>().valueString.Trim() != "0")
                 {
 
@@ -93,13 +89,13 @@ namespace DSPMod
 
                     GameObject toggleHighlightButton = GameObject.Instantiate<GameObject>(
                         original: iconTransform.gameObject,
-                        position: new Vector3(child.position.x+1f, child.position.y-0.02f, child.position.z),
+                        position: new Vector3(child.position.x+1.25f, child.position.y-0.02f, child.position.z),
                         rotation: Quaternion.identity,
                         parent:   child.parent); // The child object (res-entry) actually moves each time the map is opened for some reason
 
                     GameObject showNearestVeinButton = GameObject.Instantiate<GameObject>(
                         original: iconTransform.gameObject,
-                        position: new Vector3(child.position.x+1.25f, child.position.y-0.02f, child.position.z),
+                        position: new Vector3(child.position.x+1f, child.position.y-0.02f, child.position.z),
                         rotation: Quaternion.identity,
                         parent:   child.parent);
 
@@ -107,7 +103,7 @@ namespace DSPMod
                     highlightImage.sprite = spriteHighlight;
                     highlightImage.preserveAspect = true;
                     highlightImage.rectTransform.sizeDelta = new Vector2(28, 14);
-                    defaultHighlightColor = highlightImage.color; // Store the default color so we can switch back later
+                    defaultHighlightButtonColor = highlightImage.color; // Store the default color so we can switch back later
 
                     Image showNearestImage = showNearestVeinButton.GetComponent<Image>();
                     showNearestImage.sprite = spriteShowNearest;
@@ -116,7 +112,7 @@ namespace DSPMod
 
                     UIButton uiButton1 = toggleHighlightButton.GetComponent<UIButton>();
 
-                    uiButton1.tips.tipTitle = "Highlight" + i.ToString();
+                    uiButton1.tips.tipTitle = "Highlight";
                     uiButton1.tips.tipText = "Highlight veins of the type: " + (EVeinType) tempRefId + ".";
 
                     UIButton uiButton2 = showNearestVeinButton.GetComponent<UIButton>();
@@ -124,7 +120,7 @@ namespace DSPMod
                     uiButton2.tips.tipText = "Move camera to the " + (EVeinType) tempRefId + " nearest the player";
 
                     uiButton1.onClick += (id) => { ToggleVeinHeighlight(tempRefId, ref toggleHighlightButton); };
-                    uiButton1.onRightClick += (id) => { DebugStuff(tempRefId); };  // TODO: Remove
+                    // uiButton1.onRightClick += (id) => { DebugStuff(tempRefId); };
                     toggleHighlightButton.name = "net-powana-toggle-highlight";
 
                     uiButton2.onClick += (id) => { ShowNearestVein(tempRefId, ref showNearestVeinButton); };
@@ -132,7 +128,7 @@ namespace DSPMod
 
                     // todo, turn off highlights when exiting globemap?
                     buttonCreated[tempRefId] = true;
-                    Debug.Log("Created buttons for " + (EVeinType)child.GetComponent<UIResAmountEntry>().refId + " Amount: " + child.GetComponent<UIResAmountEntry>().valueString);
+                    // Debug.Log("Created buttons for " + (EVeinType)child.GetComponent<UIResAmountEntry>().refId + " Amount: " + child.GetComponent<UIResAmountEntry>().valueString);
                 }
 
             }
@@ -180,7 +176,7 @@ namespace DSPMod
             toRotate = Quaternion.LookRotation(Vector3.Cross(normalized, vector3), vector3);
 
             planetPoser.rotationWanted = toRotate;
-            planetPoser.distWanted = planetPoser.distMax;
+            planetPoser.distWanted = Mathf.Max(planetPoser.dist, planetPoser.distMax*0.2f); // Maybe this should just be planetPoser.dist
 
         }
 
@@ -196,8 +192,7 @@ namespace DSPMod
             // This is the group of gameobjects that contain the following components:
             // RectTransform, CanvasRenderer, UI.Image, UIVeinDetail
             Transform[] veinMarks = GameObject.Find("UI Root/Overlay Canvas/In Game/Scene UIs/Vein Marks/").GetComponentsInChildren<Transform>();
-            Vector2 effectDistance = new Vector2(5, 5);
-            Color highlightColor = new Color(1F, 0.4F, 0.23F, 0.88f);  // todo make configurable
+            
 
             highlightEnabled[refId] = !highlightEnabled[refId];
             
@@ -216,7 +211,7 @@ namespace DSPMod
                         PlanetData.VeinGroup matchingVein = uiVeinDetail.inspectPlanet.veinGroups[uiVeinDetailNode.veinGroupIndex];
 
                         Outline ol = uiVeinDetailNode.GetComponent<Outline>();
-                        if (ol == null)  // Todo make outline pretty
+                        if (ol == null)  // Todo make outline prettier
                         {
                             ol = uiVeinDetailNode.gameObject.AddComponent(typeof(Outline)) as Outline;
                             ol.effectColor = highlightColor;
@@ -229,23 +224,36 @@ namespace DSPMod
             }
 
             Image img = button.GetComponent<Image>();
-            img.color = highlightEnabled[refId] ? enabledButtonColor : defaultHighlightColor;
+            img.color = highlightEnabled[refId] ? enabledButtonColor : defaultHighlightButtonColor;
         }
 
-        // This is the detail view to the right in globe view, todo: not to this every game tick? find better method to bind to. TODO: Check if player is dragging
+        // Every GameTick, check if player is using the move button, todo: It would be simpled to find whatever disables movement and alter that instead of altering GameTick
         [HarmonyPostfix, HarmonyPatch(typeof(PlayerController), "GameTick")]
-        private static void MoveTo()
+        private static void PlayerControllerGameTick_Postfix(PlayerController __instance, long time)
         {
-            Debug.Log(GameMain.data.mainPlayer.controller.gameData.disableController);
-            if (VFInput._rtsMove.onDown) {
-                Debug.Log("rtsMove down");
-                PlayerController playerController = GameMain.data.mainPlayer.controller;
-                RaycastHit hitInfo;
-                if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hitInfo, 800f, 8720, QueryTriggerInteraction.Collide))
+            if (!UIRoot.instance.uiGame.globemap.active) return;  // Only modify behaviour when the globe map is open
+            bool moveCameraConflict = VFInput.rtsMoveCameraConflict;
+            bool mineCameraConflict = VFInput.rtsMineCameraConflict;
+
+            if (VFInput._rtsMove.onDown)
+            {
+                dragBeginTick = GameMain.gameTick;
+                dragBeginMousePosition = Input.mousePosition;
+                Debug.Log(GameMain.gameTick.ToString());
+                hit = Physics.Raycast(Camera.main.ScreenPointToRay(dragBeginMousePosition), out hitInfo, 800f, 8720, QueryTriggerInteraction.Collide);
+            }
+
+            
+            // Check if the player moved the mouse a significant distance indicating they want to drag the camera, not move the character.
+            else if (VFInput._rtsMove.onUp && ((double)(dragBeginMousePosition - Input.mousePosition).sqrMagnitude < 800.0))
+            {
+                if (hit)
                 {
-                    Debug.Log("Raycast");
                     GameMain.data.mainPlayer.Order(OrderNode.MoveTo(hitInfo.point), (bool)VFInput._multiOrdering);
+                    RTSTargetGizmo.Create(hitInfo.point);
+                    hit = false;
                 }
+                
             }
         }
 
@@ -253,8 +261,6 @@ namespace DSPMod
         private static void DebugStuff(int action)
         {
             Debug.Log("Debugstuff called: " + action.ToString());
-            
-
         }
 
         private static void AddRedOutline(ref GameObject gameObject)
