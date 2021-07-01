@@ -40,7 +40,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy /y &quot;$(TargetPath)&quot; &quot;G:\Games\Steam Games\steamapps\common\Dyson Sphere Program\BepInEx\scripts&quot;" />
+    <Exec Command="copy /y &quot;$(TargetPath)&quot; &quot;G:\Games\Steam Games\steamapps\common\Dyson Sphere Program\BepInEx\scripts&quot;&#xD;&#xA;copy /y &quot;$(TargetPath)&quot; &quot;G:\Games\Steam Games\steamapps\common\Dyson Sphere Program\BepInEx\plugins&quot;" />
   </Target>
 
 </Project>

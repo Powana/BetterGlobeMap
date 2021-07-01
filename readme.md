@@ -18,6 +18,7 @@ Click the `Install with Mod Manager` link above.
 ## Changelog
 
 #### v1.0.2
+Fixed bug where buttons were not hiding properly
 
 #### v1.0.1
 Added missing assetbundle, oops

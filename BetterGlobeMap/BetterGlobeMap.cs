@@ -20,8 +20,10 @@ namespace BetterGlobeMap
         public const string pluginName = "Better Globe Map";
         public const string pluginVersion = "1.0.2.0";
 
+        private const string bundleName = "net-powana-bgm-bundle";
+
         static bool[] highlightEnabled = new bool[15];
-        static bool[] buttonCreated = new bool[15]; //  Needed because the refIds of resources bug out, this ensures no duplicate buttons are created
+        static bool[] buttonCreated = new bool[15]; // Needed because the refIds of resources bug out, this ensures no duplicate buttons are created
 
         private static List<GameObject> createdObjects = new List<GameObject>();
 
@@ -31,8 +33,8 @@ namespace BetterGlobeMap
 
         private static Color enabledButtonColor = new Color(83f, 202f, 252f, 0.5f); // Colour that is set on activated button
         private static Color defaultHighlightButtonColor;                           // Colour of highlight button
-        private static Color highlightColor = new Color(1F, 0.22F, 0.11F, 0.95f);      // Colour of vein highlights todo make configurable
-        private static Vector2 effectDistance = new Vector2(5, 5);  // Size of highlight outline
+        private static Color highlightColor = new Color(1F, 0.22F, 0.11F, 0.95f);   // Colour of vein highlights todo make configurable
+        private static Vector2 effectDistance = new Vector2(5, 5);                  // Size of highlight outline
         
         private static RaycastHit hitInfo = new RaycastHit();
         private static bool hit = false;
@@ -45,10 +47,8 @@ namespace BetterGlobeMap
         void Awake()
         {
             harmony = new Harmony(pluginGuid);
-            // string pluginfolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            // bundle = AssetBundle.LoadFromFile($"{pluginfolder}/net-powana-bgm-bundle");  // todo change back to: $"{pluginfolder}/net-powana-bgm-bundle", or a better string, check where the mod installer places the bundle file
-            bundle = AssetBundle.LoadFromFile("G:/Games/Steam Games/steamapps/common/Dyson Sphere Program/BepInEx/scripts/net-powana-bgm-bundle");
 
+            bundle = AssetBundle.LoadFromFile(Paths.PluginPath + "/" + bundleName);
 
             spriteShowNearest = bundle.LoadAsset<Sprite>("assets/ui/iconNearest.png");
             spriteHighlight = bundle.LoadAsset<Sprite>("assets/ui/iconHighlight.png");
@@ -63,8 +63,14 @@ namespace BetterGlobeMap
         public static void UIPlanetDetail_Postfix(UIPlanetDetail __instance)
         {
 
-            // open starpmap on v check
+            // Check if current viewmode is Globe, if not hide objects and return.
+            bool active = UIGame.viewMode == EViewMode.Globe;
 
+            foreach (GameObject existingGO in createdObjects)
+            {
+                existingGO.SetActive(active);
+            }
+            if (!active) return;
 
             GameObject go = __instance.gameObject;
 
@@ -144,32 +150,9 @@ namespace BetterGlobeMap
         }
 
 
-        [HarmonyPrefix, HarmonyPatch(typeof(UIGlobemap), "FadeOut")]
-        public static void UIPGlobemap_FadeOut_Prefix(UIGlobemap __instance)
-        {
-            Debug.Log("FADEOUT: " + createdObjects.ToString());
-            foreach (GameObject go in createdObjects)
-            {
-                go.SetActive(false);
-            }
-        }
-
-        [HarmonyPostfix, HarmonyPatch(typeof(UIGlobemap), "FadeIn")]
-        public static void UIPGlobemap_FadeIn_Postfix(UIGlobemap __instance)
-        {
-            Debug.Log("FADEIN: " + createdObjects.ToString());
-
-            foreach (GameObject go in createdObjects)
-            {
-                go.SetActive(true);
-            }
-        }
-
-
         private static void ShowNearestVein(int refId, ref GameObject button)
         {
-            
-            Debug.Log("\nShow nearest called with refId: " + refId.ToString());
+            // Debug.Log("\nShow nearest called with refId: " + refId.ToString());
             
             GameCamera gameCamera = GameCamera.instance;
             PlanetPoser planetPoser = gameCamera.planetPoser;
@@ -214,7 +197,7 @@ namespace BetterGlobeMap
         private static void ToggleVeinHeighlight(int refId, ref GameObject button)
         {
 
-            Debug.Log("HeighlightVeins called with refId:" + refId.ToString());
+            // Debug.Log("HeighlightVeins called with refId:" + refId.ToString());
             if (refId < 0 || refId > 15)
             {
                 return;
@@ -269,7 +252,6 @@ namespace BetterGlobeMap
             if (VFInput._rtsMove.onDown)
             {
                 dragBeginMousePosition = Input.mousePosition;
-                Debug.Log(GameMain.gameTick.ToString());
                 hit = Physics.Raycast(Camera.main.ScreenPointToRay(dragBeginMousePosition), out hitInfo, 800f, 8720, QueryTriggerInteraction.Collide);
             }
 
@@ -290,8 +272,8 @@ namespace BetterGlobeMap
 
         void OnDestroy()
         {
+            Debug.Log("Destroying BGM ;)");
             AssetBundle.UnloadAllAssetBundles(true);
-            Debug.Log("Destroying self ;)");
             harmony.UnpatchSelf();
         }
 
