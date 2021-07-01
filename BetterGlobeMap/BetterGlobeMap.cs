@@ -18,10 +18,13 @@ namespace BetterGlobeMap
     {
         public const string pluginGuid = "net.powana.plugins.DSP.BGM";
         public const string pluginName = "Better Globe Map";
-        public const string pluginVersion = "1.0.0.0";
+        public const string pluginVersion = "1.0.2.0";
 
         static bool[] highlightEnabled = new bool[15];
-        static bool[] buttonCreated = new bool[15]; //  Needed because the refIds of resourced bug out, this ensures no duplicate buttons are created
+        static bool[] buttonCreated = new bool[15]; //  Needed because the refIds of resources bug out, this ensures no duplicate buttons are created
+
+        private static List<GameObject> createdObjects = new List<GameObject>();
+
         static AssetBundle bundle;
         static Sprite spriteShowNearest = null;
         static Sprite spriteHighlight = null;
@@ -30,7 +33,7 @@ namespace BetterGlobeMap
         private static Color defaultHighlightButtonColor;                           // Colour of highlight button
         private static Color highlightColor = new Color(1F, 0.22F, 0.11F, 0.95f);      // Colour of vein highlights todo make configurable
         private static Vector2 effectDistance = new Vector2(5, 5);  // Size of highlight outline
-
+        
         private static RaycastHit hitInfo = new RaycastHit();
         private static bool hit = false;
 
@@ -42,8 +45,10 @@ namespace BetterGlobeMap
         void Awake()
         {
             harmony = new Harmony(pluginGuid);
-            string pluginfolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            bundle = AssetBundle.LoadFromFile($"{pluginfolder}/net-powana-bgm-bundle");
+            // string pluginfolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            // bundle = AssetBundle.LoadFromFile($"{pluginfolder}/net-powana-bgm-bundle");  // todo change back to: $"{pluginfolder}/net-powana-bgm-bundle", or a better string, check where the mod installer places the bundle file
+            bundle = AssetBundle.LoadFromFile("G:/Games/Steam Games/steamapps/common/Dyson Sphere Program/BepInEx/scripts/net-powana-bgm-bundle");
+
 
             spriteShowNearest = bundle.LoadAsset<Sprite>("assets/ui/iconNearest.png");
             spriteHighlight = bundle.LoadAsset<Sprite>("assets/ui/iconHighlight.png");
@@ -57,6 +62,9 @@ namespace BetterGlobeMap
         [HarmonyPostfix, HarmonyPatch(typeof(UIPlanetDetail), "_OnOpen")]
         public static void UIPlanetDetail_Postfix(UIPlanetDetail __instance)
         {
+
+            // open starpmap on v check
+
 
             GameObject go = __instance.gameObject;
 
@@ -125,12 +133,38 @@ namespace BetterGlobeMap
 
                     // todo, turn off highlights when exiting globemap?
                     buttonCreated[tempRefId] = true;
+
+                    createdObjects.Add(toggleHighlightButton);
+                    createdObjects.Add(showNearestVeinButton);
                     // Debug.Log("Created buttons for " + (EVeinType)child.GetComponent<UIResAmountEntry>().refId + " Amount: " + child.GetComponent<UIResAmountEntry>().valueString);
                 }
 
             }
 
         }
+
+
+        [HarmonyPrefix, HarmonyPatch(typeof(UIGlobemap), "FadeOut")]
+        public static void UIPGlobemap_FadeOut_Prefix(UIGlobemap __instance)
+        {
+            Debug.Log("FADEOUT: " + createdObjects.ToString());
+            foreach (GameObject go in createdObjects)
+            {
+                go.SetActive(false);
+            }
+        }
+
+        [HarmonyPostfix, HarmonyPatch(typeof(UIGlobemap), "FadeIn")]
+        public static void UIPGlobemap_FadeIn_Postfix(UIGlobemap __instance)
+        {
+            Debug.Log("FADEIN: " + createdObjects.ToString());
+
+            foreach (GameObject go in createdObjects)
+            {
+                go.SetActive(true);
+            }
+        }
+
 
         private static void ShowNearestVein(int refId, ref GameObject button)
         {
@@ -252,6 +286,15 @@ namespace BetterGlobeMap
                 
             }
         }
+
+
+        void OnDestroy()
+        {
+            AssetBundle.UnloadAllAssetBundles(true);
+            Debug.Log("Destroying self ;)");
+            harmony.UnpatchSelf();
+        }
+
 
         // Debug methods below
         private static void DebugStuff(int action)

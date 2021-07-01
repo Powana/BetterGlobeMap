@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Platforms>AnyCPU;x64</Platforms>
+    <RunPostBuildEvent>Always</RunPostBuildEvent>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +18,9 @@
     </Reference>
     <Reference Include="BepInEx.Harmony">
       <HintPath>G:\Games\Steam Games\steamapps\common\Dyson Sphere Program\BepInEx\core\BepInEx.Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="System">
+      <HintPath>G:\Games\Steam Games\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\System.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>G:\Games\Steam Games\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\UnityEngine.dll</HintPath>
@@ -34,5 +38,9 @@
       <HintPath>G:\Games\Steam Games\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="copy /y &quot;$(TargetPath)&quot; &quot;G:\Games\Steam Games\steamapps\common\Dyson Sphere Program\BepInEx\scripts&quot;" />
+  </Target>
 
 </Project>
