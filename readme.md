@@ -1,4 +1,5 @@
-﻿## Better Globe Map
+﻿
+## Better Globe Map
 
 Allows you to move your character while the globe map is open.
 
@@ -16,8 +17,14 @@ Click the `Install with Mod Manager` link above.
 
 ## Changelog
 
+#### v1.0.2
+
+#### v1.0.1
+Added missing assetbundle, oops
+
 #### v1.0.0 
 Release
+
 
 ## Contact
 If you have a bug report, feature request, etc. feel free to contact me on discord: Powana#7296 
