@@ -18,7 +18,7 @@ namespace BetterGlobeMap
     {
         public const string pluginGuid = "net.powana.plugins.DSP.BGM";
         public const string pluginName = "Better Globe Map";
-        public const string pluginVersion = "1.0.2.0";
+        public const string pluginVersion = "1.0.3.0";
 
         private const string bundleName = "net-powana-bgm-bundle";
 
@@ -49,11 +49,17 @@ namespace BetterGlobeMap
             harmony = new Harmony(pluginGuid);
 
             bundle = AssetBundle.LoadFromFile(Paths.PluginPath + "/" + bundleName);
-
+            if (bundle == null)
+            {
+                Debug.Log("Don't worry about the previous 'Unable to load file' error, do worry if there is another error after this line (:");
+                // mod manager places files in subdir, check there
+                bundle = AssetBundle.LoadFromFile(Paths.PluginPath + "/Powana-BetterGlobeMap/" + bundleName);
+            }
             spriteShowNearest = bundle.LoadAsset<Sprite>("assets/ui/iconNearest.png");
             spriteHighlight = bundle.LoadAsset<Sprite>("assets/ui/iconHighlight.png");
 
             harmony.PatchAll(typeof(BetterGlobeMap));
+
             Debug.Log("Better Globe Map started!");
             
         }
