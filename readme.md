@@ -17,15 +17,21 @@ Click the `Install with Mod Manager` link above.
 
 ## Changelog
 
+#### v1.0.4
+Wrong file in 1.0.3 (:
+
+#### v1.0.3
+Fix for mod manager users where assetbundle wasn't found.
+
 #### v1.0.2
-Fixed bug where buttons were not hiding properly
+Fixed bug where buttons were not hiding properly.
 
 #### v1.0.1
-Added missing assetbundle, oops
+Added missing assetbundle, oops.
 
 #### v1.0.0 
-Release
+Release.
 
 
 ## Contact
-If you have a bug report, feature request, etc. feel free to contact me on discord: Powana#7296 
+If you have a bug report, feature request, etc. feel free to contact me on discord: Powana#7296, or create an issue in the github repository.

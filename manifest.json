@@ -1,6 +1,6 @@
 {
     "name": "BetterGlobeMap",
-    "version_number": "1.0.2",
+    "version_number": "1.0.4",
     "website_url": "https://github.com/Powana/BetterGlobeMap",
     "description": "Allows the player to move when the globe map is open. Also allows highlighting and finding resource veins.",
     "dependencies": [
