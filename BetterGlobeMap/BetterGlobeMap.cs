@@ -18,7 +18,7 @@ namespace BetterGlobeMap
     {
         public const string pluginGuid = "net.powana.plugins.DSP.BGM";
         public const string pluginName = "Better Globe Map";
-        public const string pluginVersion = "1.0.4.0";
+        public const string pluginVersion = "1.0.5.0";
 
         private const string bundleName = "net-powana-bgm-bundle";
 
