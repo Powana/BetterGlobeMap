@@ -17,6 +17,9 @@ Click the `Install with Mod Manager` link above.
 
 ## Changelog
 
+#### v1.0.5
+Updated to new game version.
+
 #### v1.0.4
 Wrong file in 1.0.3 (:
 
