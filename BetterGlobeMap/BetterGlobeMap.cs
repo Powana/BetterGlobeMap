@@ -137,7 +137,7 @@ namespace BetterGlobeMap
                     uiButton2.tips.tipText = "Move camera to the " + (EVeinType) tempRefId + " nearest the player";
 
                     uiButton1.onClick += (id) => { ToggleVeinHeighlight(tempRefId, ref toggleHighlightButton); };
-                    // uiButton1.onRightClick += (id) => { DebugStuff(tempRefId); };
+                    uiButton1.onRightClick += (id) => { DebugStuff(tempRefId); };
                     toggleHighlightButton.name = "net-powana-toggle-highlight";
 
                     uiButton2.onClick += (id) => { ShowNearestVein(tempRefId, ref showNearestVeinButton); };
@@ -148,7 +148,7 @@ namespace BetterGlobeMap
 
                     createdObjects.Add(toggleHighlightButton);
                     createdObjects.Add(showNearestVeinButton);
-                    // Debug.Log("Created buttons for " + (EVeinType)child.GetComponent<UIResAmountEntry>().refId + " Amount: " + child.GetComponent<UIResAmountEntry>().valueString);
+                    Debug.Log("Created buttons for " + (EVeinType)child.GetComponent<UIResAmountEntry>().refId + " Amount: " + child.GetComponent<UIResAmountEntry>().valueString);
                 }
 
             }
@@ -158,24 +158,23 @@ namespace BetterGlobeMap
 
         private static void ShowNearestVein(int refId, ref GameObject button)
         {
-            // Debug.Log("\nShow nearest called with refId: " + refId.ToString());
+            Debug.Log("\nShow nearest called with refId: " + refId.ToString() + " button: " + button.ToString());
             
             GameCamera gameCamera = GameCamera.instance;
             PlanetPoser planetPoser = gameCamera.planetPoser;
             Vector3 playerPos = GameMain.mainPlayer.position;
 
             // Get the veins that have a matching refId, using the planetdata of the planet linked to in the planetdetail pane
-            PlanetData.VeinGroup[] veins = UIRoot.instance.uiGame.planetDetail.planet.veinGroups;
-            
+            VeinGroup[] veins = UIRoot.instance.uiGame.planetDetail.planet.runtimeVeinGroups;
+
             // toRotate can be used with planetPoser to move to vein.pos, default to first vein
             Quaternion toRotate = Quaternion.FromToRotation(Vector3.up, veins[0].pos);
-
             // default to first
             float closestPosMag = (playerPos.normalized - veins[0].pos).magnitude;
 
             Quaternion tempRotate;
 
-            foreach (PlanetData.VeinGroup vein in veins)
+            foreach (VeinGroup vein in veins)
             {
                 if (vein.type == (EVeinType) refId) {
                     // Quat to rotate the planet towards
@@ -226,9 +225,9 @@ namespace BetterGlobeMap
                 foreach (UIVeinDetailNode uiVeinDetailNode in uiVeinDetail.allTips)
                 {
                     // Check if the node is of the type we selected, todo: Check if it is also on the right planet.
-                    if ((uiVeinDetail.inspectPlanet != null) && (uiVeinDetail.inspectPlanet.veinGroups[uiVeinDetailNode.veinGroupIndex].type == (EVeinType)refId))
+                    if ((uiVeinDetail.inspectPlanet != null) && (uiVeinDetail.inspectPlanet.runtimeVeinGroups[uiVeinDetailNode.veinGroupIndex].type == (EVeinType)refId))
                     {
-                        PlanetData.VeinGroup matchingVein = uiVeinDetail.inspectPlanet.veinGroups[uiVeinDetailNode.veinGroupIndex];
+                        VeinGroup matchingVein = uiVeinDetail.inspectPlanet.runtimeVeinGroups[uiVeinDetailNode.veinGroupIndex];
 
                         Outline ol = uiVeinDetailNode.GetComponent<Outline>();
                         if (ol == null)  // Todo make outline prettier
